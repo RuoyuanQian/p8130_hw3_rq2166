@@ -1,96 +1,125 @@
 ---
 title: "Homework 3"
 author: "Ruoyuan Qian"
-date: "2019/10/26"
-output: word_document
+output:   
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
+#install.packages("Rmisc")
+#install.packages("plyr")
+#install.packages("DescTools")
 library(tidyverse)
 library(ggplot2)
 library(plyr)
 library(readxl)
 library(dplyr)
 library(arsenal)
-#install.packages("survminer")
-library(survival)
-library(survminer)
 library(ggpubr)
-#devtools::install_github("thomasp85/patchwork")
-#library(patchwork)
-#install.packages("Rmisc")
-#install.packages("plyr")
-library("Rmisc")
-library("plyr")
+library(Rmisc)
+library(DescTools)
+
 ```
 
 # Problem 2
 
 ## a)
+
+Input data
 ```{r}
 surv = read_csv(".\\data\\SurvCancer.csv")
-ggplot(surv, aes(  x = SURVIVAL, 
-              fill = ORGAN,group=ORGAN)) + 
- geom_density(alpha = .4, adjust = .5, color = "blue") + 
-  facet_grid(ORGAN ~. )+
-  theme(legend.position = "bottom")+
-  labs(x = "Sruvival time",
-       y = "Density",
-       title = "Plot 1  Distributions of survival time in each group"
-       )+
-  theme(plot.title = element_text(hjust = 0.5))
 ```
 
+Make discriptive statistics table
 ```{r}
 surv %>% 
   group_by(ORGAN) %>% 
-  mutate( median = median(SURVIVAL),
-          IQR = paste(quantile(SURVIVAL)[2],"-",
-                      quantile(SURVIVAL)[4])) %>% 
+  mutate( N = n(),
+          Mean = round(mean(SURVIVAL),2),
+          SD = round(sd(SURVIVAL),2),
+          Median = median(SURVIVAL),
+          IQR = str_c(quantile(SURVIVAL)[2],"-",
+                      quantile(SURVIVAL)[4]),
+          Range = str_c(min(SURVIVAL),"-",max(SURVIVAL))) %>% 
   select(-SURVIVAL) %>% 
   distinct() %>% 
   knitr::kable(caption = "Table 1  Discriptive statistics of each group",
                format = "html") 
 
+
 ```
 
+
+Make boxplot of survival time
 ```{r}
-surv_p =
+boxplot(SURVIVAL~ORGAN,data=surv,main="Survival time in each organ group",xlab="Organ", ylab="Survival time")
+
+```
+
+
+Make density plot 
+```{r}
+Stomach_his = 
 surv %>% 
-  mutate(status = 1) 
-```
-```{r}
-fit<-survfit(Surv(SURVIVAL,status)~ORGAN,data=surv_p)
-plot(fit)	
+filter(ORGAN=="Stomach") %>% 
+ ggplot(aes(SURVIVAL,..density..))+
+ geom_histogram(binwidth = 140)+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Stomach")
 
+Bronchus_his = 
+surv %>% 
+filter(ORGAN=="Bronchus") %>% 
+ ggplot(aes(SURVIVAL,..density..))+
+ geom_histogram(binwidth = 130)+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Bronchus")
 
-ggsurvplot(fit)
-```
+Colon_his = 
+surv %>% 
+filter(ORGAN=="Colon") %>% 
+ ggplot(aes(SURVIVAL,..density..))+
+ geom_histogram(binwidth = 140)+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Colon")
 
-```{r}
-boxplot(SURVIVAL~ORGAN,data=surv_p,main="Survival time in each organ group",xlab="Organ", ylab="Survival time")
+Ovary_his = 
+surv %>% 
+filter(ORGAN=="Ovary") %>% 
+ ggplot(aes(SURVIVAL,..density..))+
+ geom_histogram(binwidth = 400)+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Ovary")
 
+Breast_his = 
+surv %>% 
+filter(ORGAN=="Breast") %>% 
+ ggplot(aes(SURVIVAL,..density..))+
+ geom_histogram(binwidth = 400)+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Breast")
+
+multiplot(Stomach_his,Bronchus_his,
+          Colon_his,Ovary_his,Breast_his,
+          cols=2)
 ```
 
 
 ## b)
+
+ANOVA 
 
 Calculated by R
 ```{r}
 res1<-aov(SURVIVAL~factor(ORGAN), data=surv)
 
 summary(res1) 
-
-  
-qf(0.99,4,59)
-
 ```
 
 Calculated by hand
 ```{r}
-sum((surv[,1])^2)
-
-(sum(surv[,1]))^2
 
 n = surv %>% 
   pull(ORGAN) %>% 
@@ -124,120 +153,30 @@ whithin_ss = total_ss - between_ss
 MSB = between_ss/(k-1)
 MSE = whithin_ss/(n-k)
 
-F_stat = MSB/MSE
+f_s = MSB/MSE
+
+p_value = 1-pf(f_s,(k-1),(n-k))
+
+f_a = qf(0.99,4,59)
+
+f_s > f_a
 ```
-
-
 
 ## c)
 
+Pairwise comparison
 ```{r}
 pairwise.t.test(surv$SURVIVAL, surv$ORGAN, p.adj='bonferroni')
 
-# For Tukey, we need to use another function with an object created by aov()
 TukeyHSD(res1,conf.level = 0.99)
-
-#install.packages("DescTools")
-library(DescTools)
 
 DunnettTest(surv$SURVIVAL, factor(surv$ORGAN))
 ```
-```{r}
 
-qt(1-0.001/2,59)
-```
-```{r}
-Stomach = 
-surv %>% 
-  filter(ORGAN=="Stomach")
-
-Colon = 
-surv %>% 
-  filter(ORGAN=="Colon")
-
-Ovary = 
-surv %>% 
-  filter(ORGAN=="Ovary")
-
-Bronchus = 
-surv %>% 
-  filter(ORGAN=="Bronchus")
-
-Breast = 
-surv %>% 
-  filter(ORGAN=="Breast")
-
-var.test(Stomach$SURVIVAL,Bronchus$SURVIVAL, alternative = "two.sided")
-
-f_s = var(Stomach$SURVIVAL)/var(Bronchus$SURVIVAL)
-
-mean_sto = sum(Stomach %>% pull(SURVIVAL))/(Stomach %>% pull(SURVIVAL) %>% length())
-
-var_sto = 
-  sum((Stomach %>% pull(SURVIVAL)-mean_sto)^2)/(Stomach %>% pull(SURVIVAL) %>% length()-1)
-
-mean_bro = sum(Bronchus %>% pull(SURVIVAL))/(Bronchus %>% pull(SURVIVAL) %>% length())
-
-var_bro = 
-  sum((Bronchus %>% pull(SURVIVAL)-mean_bro)^2)/(Bronchus %>% pull(SURVIVAL) %>% length()-1)
-
-n_sto = (Stomach %>% pull(SURVIVAL) %>% length())
-
-n_bro = (Bronchus %>% pull(SURVIVAL) %>% length())
-
-f_a = qf(0.975,n_sto-1,n_bro-1)
-
-f_s < f_a
-```
-
-```{r}
-s_2 = ((n_sto-1)*var_sto+(n_bro-1)*var_bro)/(n_sto+n_bro-2)
-
-t_s = (mean_sto-mean_bro)/sqrt(s_2*(1/n_sto+1/n_bro))
-
-
-p_value = 2*(1-(pt(t_s,n-k)))
-p_value
-
-t.test(Stomach$SURVIVAL,Bronchus$SURVIVAL,
-       paired=F,var.equal=T,
-       alternative = "two.sided", conf.level = 0.99)
-
-t.test(Ovary$SURVIVAL,Bronchus$SURVIVAL,
-       paired=F,var.equal=T,
-       alternative = "two.sided", conf.level = 0.99)
-
-
-p_value = 2*(pt(2.5,21))
-p_value
-```
 
 ## d)
 
-```{r}
-x <- c(2.9, 3.0, 2.5, 2.6, 3.2) # normal subjects
-y <- c(3.8, 2.7, 4.0, 2.4)      # with obstructive airway disease
-z <- c(2.8, 3.4, 3.7, 2.2, 2.0) # with asbestosis
-
-#DunnettTest(list(x, y, z))
-
-## Equivalently,
-x <- c(x, y, z)
-g <- factor(rep(1:3, c(5, 4, 5)),
-            labels = c("Normal subjects",
-                       "Subjects with obstructive airway disease",
-                       "Subjects with asbestosis"))
-
-#DunnettTest(x, g)
-
-## Formula interface
-#boxplot(Ozone ~ Month, data = airquality)
-#DunnettTest(Ozone ~ Month, data = airquality)
-
-#DunnettTest(Ozone ~ Month, data = airquality, control="8", conf.level=0.9)
-```
-
-## d)
+Make denrity and Q-Q plot
 ```{r}
 Stomach =
  surv %>% 
@@ -265,20 +204,6 @@ Breast =
   pull(SURVIVAL)
 
 ```
-
-```{r}
-#surv %>% 
-# ggplot(aes(SURVIVAL,..density..,
-#           fill = ORGAN))+
-# geom_histogram()+
-# geom_line(stat = 'density',size = 1)+
-#    facet_grid(ORGAN ~. )+
-#  theme(legend.position = "bottom")+
-#    labs(
-#       title = "Density plot of organ group")
-```
-
-
 ```{r}
 Stomach_his = 
 surv %>% 
@@ -292,8 +217,6 @@ Stomach_qq =
 ggqqplot(Stomach,main="Q-Q plot for intervention group")
 
 
-```
-```{r}
 Bronchus_his = 
 surv %>% 
 filter(ORGAN=="Bronchus") %>% 
@@ -306,9 +229,6 @@ Bronchus_qq =
 ggqqplot(Bronchus,main="Q-Q plot for intervention group")
 
 
-```
-Colon
-```{r}
 Colon_his = 
 surv %>% 
 filter(ORGAN=="Colon") %>% 
@@ -319,10 +239,8 @@ filter(ORGAN=="Colon") %>%
 
 Colon_qq = 
 ggqqplot(Colon,main="Q-Q plot for intervention group")
-```
 
-Ovary
-```{r}
+
 Ovary_his = 
 surv %>% 
 filter(ORGAN=="Ovary") %>% 
@@ -334,11 +252,7 @@ filter(ORGAN=="Ovary") %>%
 Ovary_qq = 
 ggqqplot(Ovary,main="Q-Q plot for intervention group")
 
-multiplot(Ovary_his,Ovary_qq, cols=2)
 
-```
-Breast
-```{r}
 Breast_his = 
 surv %>% 
 filter(ORGAN=="Breast") %>% 
@@ -354,20 +268,17 @@ ggqqplot(Breast,main="Q-Q plot for intervention group")
 
 multiplot(Stomach_his,Bronchus_his,
           Stomach_qq,Bronchus_qq, 
- cols=2)
+          cols=2)
+
 multiplot(
           Colon_his,Ovary_his,Breast_his,
           Colon_qq,Ovary_qq, Breast_qq,
           cols=2)
 
-multiplot(Stomach_his,Bronchus_his,
-          Colon_his,Ovary_his,Breast_his,
-          cols=2)
 ```
 
-
+Perform Shapiro-Wilk test
 ```{r}
-# Perform Shapiro-Wilk test
 shapiro.test(Stomach)
 shapiro.test(Bronchus)
 shapiro.test(Colon)
@@ -382,6 +293,126 @@ Krusak-Wallis test can be used when the normality is questionable.
 
 ### ii)
 
+Log-transformation
+```{r}
+surv_log = 
+  surv %>% 
+  mutate(log = log(SURVIVAL))
+
+```
+
+Make density and Q-Q plots after log-transformation
+```{r}
+Stomach =
+ surv_log %>% 
+  filter(ORGAN == "Stomach") %>% 
+  pull(log)
+
+Bronchus =
+ surv_log %>% 
+  filter(ORGAN == "Bronchus") %>% 
+  pull(log)
+
+Colon =
+ surv_log %>% 
+  filter(ORGAN == "Colon") %>% 
+  pull(log)
+
+Ovary =
+ surv_log %>% 
+  filter(ORGAN == "Ovary") %>% 
+  pull(log)
+
+Breast =
+ surv_log %>% 
+  filter(ORGAN == "Breast") %>% 
+  pull(log)
+
+```
+
+```{r}
+Stomach_his = 
+surv_log %>% 
+filter(ORGAN=="Stomach") %>% 
+ ggplot(aes(log,..density..))+
+ geom_histogram(binwidth = .5)+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Stomach")
+
+Stomach_qq = 
+ggqqplot(Stomach,main="Q-Q plot for intervention group")
+
+
+Bronchus_his = 
+surv_log %>% 
+filter(ORGAN=="Bronchus") %>% 
+ ggplot(aes(log,..density..))+
+ geom_histogram()+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Bronchus")
+
+Bronchus_qq = 
+ggqqplot(Bronchus,main="Q-Q plot for intervention group")
+
+
+Colon_his = 
+surv_log %>% 
+filter(ORGAN=="Colon") %>% 
+ ggplot(aes(log,..density..))+
+ geom_histogram()+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Colon")
+
+Colon_qq = 
+ggqqplot(Colon,main="Q-Q plot for intervention group")
+
+
+Ovary_his = 
+surv_log %>% 
+filter(ORGAN=="Ovary") %>% 
+ ggplot(aes(log,..density..))+
+ geom_histogram(binwidth = 0.6)+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Ovary")
+
+Ovary_qq = 
+ggqqplot(Ovary,main="Q-Q plot for intervention group")
+
+
+Breast_his = 
+surv_log %>% 
+filter(ORGAN=="Breast") %>% 
+ ggplot(aes(log,..density..))+
+ geom_histogram()+
+ geom_line(stat = 'density',size = 1)+
+    labs(x = "Breast")
+
+Breast_qq = 
+ggqqplot(Breast,main="Q-Q plot for intervention group")
+
+
+
+multiplot(Stomach_his,Bronchus_his,
+          Stomach_qq,Bronchus_qq, 
+          cols=2)
+
+multiplot(
+          Colon_his,Ovary_his,Breast_his,
+          Colon_qq,Ovary_qq, Breast_qq,
+          cols=2)
+
+```
+
+Perform Shapiro-Wilk test
+```{r}
+shapiro.test(Stomach)
+shapiro.test(Bronchus)
+shapiro.test(Colon)
+shapiro.test(Ovary)
+shapiro.test(Breast)
+```
+
+KW.test for non-normality data
 ```{r}
 kruskal.test(surv$SURVIVAL~surv$ORGAN)
 
@@ -394,9 +425,19 @@ summary(res1)
 
 ## a)
 
-group 1: placebo and iron 
-group 2: zinc and zinc+ iron
+group nz: placebo and iron 
 
+group z: zinc and zinc+ iron
+
+group pla: placebo
+
+group iro: iron
+
+group z: zinc
+
+group zi: zinc+iron
+
+Input data
 ```{r}
 treatment = c("placebo","iron","zinc","zinc+iron")
 n = c(56,54,54,55)
@@ -414,6 +455,8 @@ data_z =
   filter(treatment %in% c("zinc","zinc+iron"))
 
 ```
+
+Calculate the averages and difference in the averages
 ```{r}
 mean_nz =
   data_nz %>% 
@@ -436,7 +479,6 @@ n_z =
   distinct %>% 
   pull(n_z)
 
-
 n_nz = 
   data_nz %>% 
   mutate(n_nz = sum(n)) %>% 
@@ -458,27 +500,21 @@ se_z =
   distinct %>% 
   pull(new_se)
 
-
-
-d1 = mean_nz - mean_z
-
-d2 = (mean_nz*n_nz- mean_z*n_z)/(n_nz+n_z)
-d_se = sqrt(se_nz^2+se_z^2)
-
-d1
-d2
+d1 = round(mean_nz - mean_z,2)
   
 ```
 
 ## b)
 
-sd
+Calculate sd for each original group
 ```{r}
 data_sd = 
 data %>% 
   mutate(sd = sqrt(se^2*n)) %>% 
   as.matrix()
 ```
+
+F-test for ‘zinc’ and ‘zinc-iron' group
 ```{r }
 
 sd_pla = as.numeric(data_sd[1,5])
@@ -488,56 +524,56 @@ n_pla = as.numeric(data_sd[1,2])
 n_iro = as.numeric(data_sd[2,2])
 
             
-# calculate the test-statistics
 f_s = sd_pla^2/sd_iro^2
 
-# calculate F-value when type 1 error = .05
 f_a = qf(0.975,n_pla-1,n_iro-1)
 
 f_s < f_a
 ```
 
-Sd is equal between placebo and iron.
+So sd is equal between placebo and iron.
 
+F-test for ‘placebo’ and ‘iron’ group
 ```{r}
-
 sd_z = as.numeric(data_sd[3,5])
 sd_zi = as.numeric(data_sd[4,5])
 
 n_z = as.numeric(data_sd[3,2])
 n_zi = as.numeric(data_sd[4,2])
 
-            
-# calculate the test-statistics
 f_s = sd_zi^2/sd_z^2
 
-# calculate F-value when type 1 error = .05
 f_a = qf(0.975,n_zi-1,n_z-1)
 
 f_s < f_a
 ```
 
-Sd is equal between zinc and zinc+iron.
+So sd is equal between zinc and zinc+iron.
 
+Calculate the var for new groups
 ```{r}
-s_nz_2 = ((n_pla-1)*sd_pla^2+(n_iro-1)*sd_iro^2)/(n_pla+n_iro-2)
+s_nz_2 = round(((n_pla-1)*sd_pla^2+(n_iro-1)*sd_iro^2)/(n_pla+n_iro-2),2)
 
-s_z_2 = ((n_z-1)*sd_z^2+(n_zi-1)*sd_zi^2)/(n_z+n_zi-2)
+s_z_2 = round(((n_z-1)*sd_z^2+(n_zi-1)*sd_zi^2)/(n_z+n_zi-2),2)
 ```
 
 ## c)
 
 ### i)
+
+Sample size for equal allocation
 ```{r}
 k = 1
-n1 = (s_nz_2+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/0.5^2
-n2 = (s_nz_2+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/0.5^2
+n1 = (s_nz_2+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
+n2 = (s_nz_2+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
 
 ```
+
+Sample size for 2:1 allocation
 ```{r}
 k = 2
-n1 = (s_nz_2+s_z_2/0.5)*(qnorm(0.975)+qnorm(0.8))^2/0.5^2
-n2 = (s_nz_2*0.5+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/0.5^2
+n1 = (s_nz_2+s_z_2/0.5)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
+n2 = (s_nz_2*0.5+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
 ```
 
 
