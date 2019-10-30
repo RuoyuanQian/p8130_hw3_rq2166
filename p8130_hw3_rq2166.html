@@ -2236,12 +2236,15 @@ s_z_2 = round(((n_z-1)*sd_z^2+(n_zi-1)*sd_zi^2)/(n_z+n_zi-2),2)</code></pre>
 <h3>i)</h3>
 <p>Sample size for equal allocation</p>
 <pre class="r"><code>k = 1
-n1 = (s_nz_2+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
-n2 = (s_nz_2+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/d1^2</code></pre>
+n1 = (s_nz_2+s_z_2)*(round((qnorm(0.975)),2)+round(qnorm(0.8),2))^2/d1^2
+n2 = (s_nz_2+s_z_2)*(round((qnorm(0.975)),2)+round(qnorm(0.8),2))^2/d1^2</code></pre>
+</div>
+<div id="ii-1" class="section level3">
+<h3>ii)</h3>
 <p>Sample size for 2:1 allocation</p>
 <pre class="r"><code>k = 2
-n1 = (s_nz_2+s_z_2/0.5)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
-n2 = (s_nz_2*0.5+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/d1^2</code></pre>
+n1 = (s_nz_2+s_z_2/0.5)*(round((qnorm(0.975)),2)+round(qnorm(0.8),2))^2/d1^2
+n2 = (s_nz_2*0.5+s_z_2)*(round((qnorm(0.975)),2)+round(qnorm(0.8),2))^2/d1^2</code></pre>
 </div>
 </div>
 </div>

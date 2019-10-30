@@ -564,16 +564,18 @@ s_z_2 = round(((n_z-1)*sd_z^2+(n_zi-1)*sd_zi^2)/(n_z+n_zi-2),2)
 Sample size for equal allocation
 ```{r}
 k = 1
-n1 = (s_nz_2+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
-n2 = (s_nz_2+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
+n1 = (s_nz_2+s_z_2)*(round((qnorm(0.975)),2)+round(qnorm(0.8),2))^2/d1^2
+n2 = (s_nz_2+s_z_2)*(round((qnorm(0.975)),2)+round(qnorm(0.8),2))^2/d1^2
 
 ```
+
+### ii)
 
 Sample size for 2:1 allocation
 ```{r}
 k = 2
-n1 = (s_nz_2+s_z_2/0.5)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
-n2 = (s_nz_2*0.5+s_z_2)*(qnorm(0.975)+qnorm(0.8))^2/d1^2
+n1 = (s_nz_2+s_z_2/0.5)*(round((qnorm(0.975)),2)+round(qnorm(0.8),2))^2/d1^2
+n2 = (s_nz_2*0.5+s_z_2)*(round((qnorm(0.975)),2)+round(qnorm(0.8),2))^2/d1^2
 ```
 
 
